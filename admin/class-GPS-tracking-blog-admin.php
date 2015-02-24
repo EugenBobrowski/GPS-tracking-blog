@@ -14,14 +14,14 @@
  * administrative side of the WordPress site.
  *
  * If you're interested in introducing public-facing
- * functionality, then refer to `class-plugin-name.php`
+ * functionality, then refer to `class-GPS-tracking-blog.php`
  *
  * @TODO: Rename this class to a proper name for your plugin.
  *
  * @package Plugin_Name_Admin
  * @author  Your Name <email@example.com>
  */
-class Plugin_Name_Admin {
+class GPSTrackingBlog_Admin {
 
 	/**
 	 * Instance of this class.
@@ -63,10 +63,10 @@ class Plugin_Name_Admin {
 		 *
 		 * @TODO:
 		 *
-		 * - Rename "Plugin_Name" to the name of your initial plugin class
+		 * - Rename "GPSTrackingBlog" to the name of your initial plugin class
 		 *
 		 */
-		$plugin = Plugin_Name::get_instance();
+		$plugin = GPSTrackingBlog::get_instance();
 		$this->plugin_slug = $plugin->get_plugin_slug();
 
 		// Load admin style sheet and JavaScript.
@@ -88,6 +88,8 @@ class Plugin_Name_Admin {
 		 */
 		add_action( '@TODO', array( $this, 'action_method_name' ) );
 		add_filter( '@TODO', array( $this, 'filter_method_name' ) );
+
+		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
 
 	}
 
@@ -116,13 +118,96 @@ class Plugin_Name_Admin {
 
 		return self::$instance;
 	}
+	/**
+	 * Adds the meta box container.
+	 */
+	public function add_meta_box( $post_type ) {
+		$post_types = array('post', 'page');     //limit meta box to certain post types
+		if ( in_array( $post_type, $post_types )) {
+			add_meta_box(
+				'add_gps_track'
+				,__( 'Add GPS track', 'gpstb' )
+				,array( $this, 'render_meta_box_content' )
+				,$post_type
+				,'advanced'
+				,'high'
+			);
+		}
+	}
+	/**
+	 * Save the meta when the post is saved.
+	 *
+	 * @param int $post_id The ID of the post being saved.
+	 */
+	public function save( $post_id ) {
+
+		/*
+		 * We need to verify this came from the our screen and with proper authorization,
+		 * because save_post can be triggered at other times.
+		 */
+
+		// Check if our nonce is set.
+		if ( ! isset( $_POST['myplugin_inner_custom_box_nonce'] ) )
+			return $post_id;
+
+		$nonce = $_POST['myplugin_inner_custom_box_nonce'];
+
+		// Verify that the nonce is valid.
+		if ( ! wp_verify_nonce( $nonce, 'myplugin_inner_custom_box' ) )
+			return $post_id;
+
+		// If this is an autosave, our form has not been submitted,
+		//     so we don't want to do anything.
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
+			return $post_id;
+
+		// Check the user's permissions.
+		if ( 'page' == $_POST['post_type'] ) {
+
+			if ( ! current_user_can( 'edit_page', $post_id ) )
+				return $post_id;
+
+		} else {
+
+			if ( ! current_user_can( 'edit_post', $post_id ) )
+				return $post_id;
+		}
+
+		/* OK, its safe for us to save the data now. */
+
+		// Sanitize the user input.
+		$mydata = sanitize_text_field( $_POST['myplugin_new_field'] );
+
+		// Update the meta field.
+		update_post_meta( $post_id, '_my_meta_value_key', $mydata );
+	}
+	/**
+	 * Render Meta Box content.
+	 *
+	 * @param WP_Post $post The post object.
+	 */
+	public function render_meta_box_content( $post ) {
+
+		// Add an nonce field so we can check for it later.
+		wp_nonce_field( 'myplugin_inner_custom_box', 'myplugin_inner_custom_box_nonce' );
+
+		// Use get_post_meta to retrieve an existing value from the database.
+		$value = get_post_meta( $post->ID, '_my_meta_value_key', true );
+
+		// Display the form, using the current value.
+		echo '<label for="myplugin_new_field">';
+		_e( 'Description for this field', 'myplugin_textdomain' );
+		echo '</label> ';
+		echo '<input type="text" id="myplugin_new_field" name="myplugin_new_field"';
+		echo ' value="' . esc_attr( $value ) . '" size="25" />';
+	}
 
 	/**
 	 * Register and enqueue admin-specific style sheet.
 	 *
 	 * @TODO:
 	 *
-	 * - Rename "Plugin_Name" to the name your plugin
+	 * - Rename "GPSTrackingBlog" to the name your plugin
 	 *
 	 * @since     1.0.0
 	 *
@@ -136,7 +221,7 @@ class Plugin_Name_Admin {
 
 		$screen = get_current_screen();
 		if ( $this->plugin_screen_hook_suffix == $screen->id ) {
-			wp_enqueue_style( $this->plugin_slug .'-admin-styles', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), Plugin_Name::VERSION );
+			wp_enqueue_style( $this->plugin_slug .'-admin-styles', plugins_url( 'assets/css/admin.css', __FILE__ ), array(), GPSTrackingBlog::VERSION );
 		}
 
 	}
@@ -146,7 +231,7 @@ class Plugin_Name_Admin {
 	 *
 	 * @TODO:
 	 *
-	 * - Rename "Plugin_Name" to the name your plugin
+	 * - Rename "GPSTrackingBlog" to the name your plugin
 	 *
 	 * @since     1.0.0
 	 *
@@ -160,7 +245,7 @@ class Plugin_Name_Admin {
 
 		$screen = get_current_screen();
 		if ( $this->plugin_screen_hook_suffix == $screen->id ) {
-			wp_enqueue_script( $this->plugin_slug . '-admin-script', plugins_url( 'assets/js/admin.js', __FILE__ ), array( 'jquery' ), Plugin_Name::VERSION );
+			wp_enqueue_script( $this->plugin_slug . '-admin-script', plugins_url( 'assets/js/admin.js', __FILE__ ), array( 'jquery' ), GPSTrackingBlog::VERSION );
 		}
 
 	}
@@ -187,8 +272,8 @@ class Plugin_Name_Admin {
 		 *   For reference: http://codex.wordpress.org/Roles_and_Capabilities
 		 */
 		$this->plugin_screen_hook_suffix = add_options_page(
-			__( 'Page Title', $this->plugin_slug ),
-			__( 'Menu Text', $this->plugin_slug ),
+			__( 'GPS Tracking Blog Settings', $this->plugin_slug ),
+			__( 'GPS Tracking Blog', $this->plugin_slug ),
 			'manage_options',
 			$this->plugin_slug,
 			array( $this, 'display_plugin_admin_page' )
