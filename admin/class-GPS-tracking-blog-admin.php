@@ -90,6 +90,7 @@ class GPSTrackingBlog_Admin {
 		add_filter( '@TODO', array( $this, 'filter_method_name' ) );
 
 		add_action( 'add_meta_boxes', array( $this, 'add_meta_box' ) );
+		add_action( 'save_post', array( $this, 'save_meta_box_data' ) );
 
 	}
 
@@ -122,7 +123,7 @@ class GPSTrackingBlog_Admin {
 	 * Adds the meta box container.
 	 */
 	public function add_meta_box( $post_type ) {
-		$post_types = array('post', 'page');     //limit meta box to certain post types
+		$post_types = array('post', 'page', 'trip');     //limit meta box to certain post types
 		if ( in_array( $post_type, $post_types )) {
 			add_meta_box(
 				'add_gps_track'
@@ -187,6 +188,24 @@ class GPSTrackingBlog_Admin {
 	 * @param WP_Post $post The post object.
 	 */
 	public function render_meta_box_content( $post ) {
+        wp_enqueue_script(
+            'google-maps',
+            'http://maps.google.com/maps/api/js?sensor=false',
+            array(),
+            '5'
+        );
+        wp_enqueue_script(
+            'gmap3',
+            plugin_dir_url(__FILE__).'../public/assets/js/gmap3.min.js',
+            array('jquery', 'google-maps'),
+            '36'
+        );
+        wp_enqueue_script(
+            'gmap-public',
+            plugin_dir_url(__FILE__).'../public/assets/js/public.js',
+            array('jquery', 'google-maps', 'gmap3'),
+            '1'
+        );
 
 		// Add an nonce field so we can check for it later.
 		wp_nonce_field( 'myplugin_inner_custom_box', 'myplugin_inner_custom_box_nonce' );
@@ -200,9 +219,20 @@ class GPSTrackingBlog_Admin {
 		echo '</label> ';
 		echo '<input type="text" id="myplugin_new_field" name="myplugin_new_field"';
 		echo ' value="' . esc_attr( $value ) . '" size="25" />';
+        echo '<p>
+        <input name="save" type="submit" class="button button-primary button-large" id="publish" accesskey="p" value="Update">
+        <input type="file" id="files" name="files[]" multiple class="button button-primary button-large" />
+        </p>';
+        echo '<div class="gmap3" style="height: 200px; width: 100%"></div>';
 	}
+    /**
+     *
+     */
+    public function save_meta_box_data ($post_id) {
 
-	/**
+    }
+
+    /**
 	 * Register and enqueue admin-specific style sheet.
 	 *
 	 * @TODO:

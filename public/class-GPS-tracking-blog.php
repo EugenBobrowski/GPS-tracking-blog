@@ -81,6 +81,9 @@ class GPSTrackingBlog {
 		add_action( '@TODO', array( $this, 'action_method_name' ) );
 		add_filter( '@TODO', array( $this, 'filter_method_name' ) );
 
+		add_filter( 'init', array( $this, 'register_post_type' ) );
+        add_shortcode('addgpstrack', array( $this, 'add_gps_track' ));
+
 	}
 
 	/**
@@ -276,7 +279,25 @@ class GPSTrackingBlog {
 	 * @since    1.0.0
 	 */
 	public function enqueue_scripts() {
-		wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
+        wp_enqueue_script(
+            'google-maps',
+            'http://maps.google.com/maps/api/js?sensor=false',
+            array(),
+            '5'
+        );
+        wp_enqueue_script(
+            'gmap3',
+            plugins_url( 'assets/js/gmap3.min.js', __FILE__ ),
+            array('jquery', 'google-maps'),
+            self::VERSION
+        );
+        wp_enqueue_script(
+            'gmap-public',
+            plugins_url( 'assets/js/public.js', __FILE__ ),
+            array('jquery', 'google-maps', 'gmap3'),
+            self::VERSION
+        );
+		//wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
 	}
 
 	/**
@@ -304,5 +325,68 @@ class GPSTrackingBlog {
 	public function filter_method_name() {
 		// @TODO: Define your filter hook callback here
 	}
+
+    /**
+     *
+     */
+    public function register_post_type() {
+        $labels = array(
+            'name'               => __( 'GPS Trips' , 'atf' ),
+            'singular_name'      => __( 'Trip' , 'atf' ),
+            'add_new'            => __( 'Add New' , 'atf' ),
+            'add_new_item'       => __( 'Add New Trip item' , 'atf' ),
+            'edit_item'          => __( 'Edit Trip item' , 'atf' ),
+            'new_item'           => __( 'New Trip item' , 'atf' ),
+            'all_items'          => __( 'All Trip items' , 'atf' ),
+            'view_item'          => __( 'View Trip item' , 'atf' ),
+            'search_items'       => __( 'Search Trips item' , 'atf' ),
+            'not_found'          => __( 'No products found' , 'atf' ),
+            'not_found_in_trash' => __( 'No products found in the Trash' , 'atf' ),
+            'parent_item_colon'  => '',
+            'menu_name'          => 'Trips'
+        );
+        $args = array(
+            'labels'        => $labels,
+            'description'   => 'Holds our products and product specific data',
+            'public'        => true,
+            'supports'      => array( 'title', 'editor', 'thumbnail', 'tags', 'sticky', 'excerpt', 'comments' ),
+            'has_archive'   => true,
+            //'menu_icon'     => plugin_dir_url(__FILE__) . 'Trip-20px.png',
+            'taxonomies'    => array('post_tag'),
+            'publicly_queryable' => true,
+            'query_var' => true,
+            'rewrite' => array('slug' => 'trip'),
+        );
+        register_post_type( 'trip' , $args );
+    }
+    public function add_gps_track($atts) {
+
+        $result = '<form>
+          <div class="form-group">
+            <label for="gpsTrackTitle">Track title</label>
+            <input type="text" name="gpstrack[title]" class="form-control" id="gpsTrackTitle" placeholder="Track title">
+          </div>
+          <div class="form-group">
+            <label for="gpsTrackDescription">Description</label>
+            <textarea class="form-control" rows="3" id="gpsTrackDescription" placeholder="Type here your story"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="exampleInputFile">File input</label>
+            <input type="file" id="exampleInputFile">
+            <p class="help-block">Example block-level help text here.</p>
+          </div>
+          <div class="gmap3" style="width: 100%; height: 300px"></div>
+          <div class="checkbox">
+            <label>
+              <input type="checkbox"> Check me out
+                </label>
+          </div>
+          <button type="submit" class="btn btn-default">Submit</button>
+        </form>';
+
+
+        return $result;
+    }
+
 
 }
