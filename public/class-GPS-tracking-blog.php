@@ -79,10 +79,14 @@ class GPSTrackingBlog {
 		 * Refer To http://codex.wordpress.org/Plugin_API#Hooks.2C_Actions_and_Filters
 		 */
 		add_action( '@TODO', array( $this, 'action_method_name' ) );
-		add_filter( '@TODO', array( $this, 'filter_method_name' ) );
+		add_filter( 'the_content', array( $this, 'add_tracking_map_to_content' ) );
 
 		add_filter( 'init', array( $this, 'register_post_type' ) );
         add_shortcode('addgpstrack', array( $this, 'add_gps_track' ));
+
+
+        add_action( 'wp_ajax_gps_filerende_ajax', array( $this, 'gps_filerende_ajax' ));
+        add_action( 'wp_ajax_nopriv_gps_filerende_ajax', array( $this, 'gps_filerende_ajax' ));
 
 	}
 
@@ -297,6 +301,9 @@ class GPSTrackingBlog {
             array('jquery', 'google-maps', 'gmap3'),
             self::VERSION
         );
+        // in JavaScript, object properties are accessed as ajax_object.ajax_url, ajax_object.we_value
+        wp_localize_script( 'gmap-public', 'ajax_object',
+            array( 'ajax_url' => admin_url( 'admin-ajax.php' ), 'we_value' => 1234 ) );
 		//wp_enqueue_script( $this->plugin_slug . '-plugin-script', plugins_url( 'assets/js/public.js', __FILE__ ), array( 'jquery' ), self::VERSION );
 	}
 
@@ -322,8 +329,19 @@ class GPSTrackingBlog {
 	 *
 	 * @since    1.0.0
 	 */
-	public function filter_method_name() {
-		// @TODO: Define your filter hook callback here
+	public function add_tracking_map_to_content($content) {
+
+        global $post;
+
+        $track = get_post_meta($post->ID, 'track_data', true);
+
+        if (!empty($track)) {
+            $result = '<div id="postMap" class="gmap3" style="width: 100%; height: 300px"></div>';
+            return $result.$content;
+        } else {
+            return $content;
+        }
+
 	}
 
     /**
@@ -357,11 +375,11 @@ class GPSTrackingBlog {
             'query_var' => true,
             'rewrite' => array('slug' => 'trip'),
         );
-        register_post_type( 'trip' , $args );
+        register_post_type( 'track' , $args );
     }
     public function add_gps_track($atts) {
 
-        $result = '<form>
+        $result = '<form id="submitTrackForm" method="POST" action="javascript:void(null);">
           <div class="form-group">
             <label for="gpsTrackTitle">Track title</label>
             <input type="text" name="gpstrack[title]" class="form-control" id="gpsTrackTitle" placeholder="Track title">
@@ -371,21 +389,76 @@ class GPSTrackingBlog {
             <textarea class="form-control" rows="3" id="gpsTrackDescription" placeholder="Type here your story"></textarea>
           </div>
           <div class="form-group">
-            <label for="exampleInputFile">File input</label>
-            <input type="file" id="exampleInputFile">
+            <label for="gpsTrackFile">File input</label>
+            <input type="file" id="gpsTrackFile" multiple >
+            <input type="hidden" id="gpsTrackContent" name="gpstrack[trackdata]">
+
             <p class="help-block">Example block-level help text here.</p>
           </div>
-          <div class="gmap3" style="width: 100%; height: 300px"></div>
-          <div class="checkbox">
-            <label>
-              <input type="checkbox"> Check me out
-                </label>
-          </div>
+          <div id="formMap" class="gmap3" style="width: 100%; height: 300px"></div>
           <button type="submit" class="btn btn-default">Submit</button>
         </form>';
 
 
         return $result;
+    }
+    public function gps_filerende_ajax () {
+
+        if ($_POST['subaction'] == 'updateMap') {
+
+            $filexp = explode('.',$_POST['fileName']);
+            $ext = array_pop($filexp);
+            if ($ext  == 'txt') {
+                $trackPath = explode(PHP_EOL, $_POST['track']);
+                $polyline = '';
+                $i = 0;
+                foreach ($trackPath as $key=>$value) {
+                    $trackPath[$key] = explode(",", $value);
+                    if ($key != 0 && !empty($trackPath[$key][0])) {
+                        if ($i != 0) {
+                            $polyline .= ', ';
+                        }
+                        $i ++;
+                        $polyline .= ' [ '
+                            .$trackPath[$key][1].', ' //lat
+                            .$trackPath[$key][2].', ' //lon
+                            .$trackPath[$key][3] //elevation
+                            .' ]';
+                    }
+                }
+                $polyline = '['.$polyline.']';
+                $output = array();
+                $output['polyline'] = json_decode($polyline);
+                echo json_encode($output);
+            } else {
+
+            }
+        } elseif ($_POST['subaction'] == 'submit') {
+
+            var_dump($_POST);
+
+            $track_id = wp_insert_post( array(
+                'post_content'   => $_POST['description'], // The full text of the post.
+                'post_title'     => $_POST['title'], // The title of your post.
+                'post_status'    => 'publish',
+                'post_type'     => 'track'
+            ) );
+            if( is_wp_error( $track_id ) ) {
+                echo $track_id->get_error_message();
+            } else {
+                add_post_meta($track_id, 'track_data', $_POST['track']);
+                echo $track_id;
+
+            }
+
+        }
+
+
+
+
+
+
+        wp_die(); // this is required to terminate immediately and return a proper response
     }
 
 
