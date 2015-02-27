@@ -336,7 +336,8 @@ class GPSTrackingBlog {
         $track = get_post_meta($post->ID, 'track_data', true);
 
         if (!empty($track)) {
-            $result = '<div id="postMap" class="gmap3" style="width: 100%; height: 300px"></div>';
+            $result = '<div id="postMap"
+            class="gmap3" style="width: 100%; height: 300px" data-track=\''.$track.'\'></div>';
             return $result.$content;
         } else {
             return $content;

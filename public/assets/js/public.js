@@ -3,7 +3,27 @@
 
 	$(function () {
         $(document).ready(function(){
-            $('.gmap3').gmap3();
+            $('.gmap3').each(function(){
+                var $map = $(this);
+                var track = $map.data('track');
+                console.log(track);
+                if (track === undefined ||track === "" || track === 0   || track === "0" || track === null  || track === false  ||  ( is_array(track) && track.length === 0 ) ) {
+                    $map.gmap3();
+                } else {
+                    $map.gmap3({
+                        polyline:{
+                            options:{
+                                strokeColor: "#FF0000",
+                                strokeOpacity: 1.0,
+                                strokeWeight: 2,
+                                path: track.polyline
+                            }
+                        },
+                        autofit:{}
+                    });
+                }
+
+            });
 
             $('#gpsTrackFile').change(function(evt){
 
@@ -48,13 +68,6 @@
                                 var obj = JSON.parse(response);
 
                                 $("#formMap").gmap3({
-                                    map:{
-                                        options:{
-                                            center:[0, -180],
-                                            zoom:2
-                                        }
-                                    },
-
                                     polyline:{
                                         options:{
                                             strokeColor: "#FF0000",
