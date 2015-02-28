@@ -7,7 +7,13 @@
                 var $map = $(this);
                 var track = $map.data('track');
                 console.log(track);
-                if (track === undefined ||track === "" || track === 0   || track === "0" || track === null  || track === false  ||  ( is_array(track) && track.length === 0 ) ) {
+                if (track == undefined ||
+                    track === "" ||
+                    track === 0   ||
+                    track === "0" ||
+                    track === null  ||
+                    track === false  ||
+                    ( ( track instanceof Array ) && track.length === 0 ) ) {
                     $map.gmap3();
                 } else {
                     $map.gmap3({
