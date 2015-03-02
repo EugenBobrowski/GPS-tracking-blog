@@ -380,8 +380,10 @@ class GPSTrackingBlog {
     }
     public function add_gps_track($atts) {
 
-        $result = '<form id="submitTrackForm" method="POST" action="javascript:void(null);">
-          <div class="form-group">
+
+        $result  = '<form id="submitTrackForm" method="POST" action="javascript:void(null);">';
+        $result .= '<input type="hidden" id="gpsChickenhut" name="gpstrack[gpsChickenhut]" value="'.wp_create_nonce( 'add-form-xxx' ).'">';
+        $result .= '<div class="form-group">
             <label for="gpsTrackTitle">Track title</label>
             <input type="text" name="gpstrack[title]" class="form-control" id="gpsTrackTitle" placeholder="Track title">
           </div>
@@ -404,6 +406,7 @@ class GPSTrackingBlog {
         return $result;
     }
     public function gps_filerende_ajax () {
+        check_ajax_referer( 'add-form-xxx', 'chickenhut' );
 
         if ($_POST['subaction'] == 'updateMap') {
 
@@ -413,23 +416,39 @@ class GPSTrackingBlog {
                 $trackPath = explode(PHP_EOL, $_POST['track']);
                 $polyline = '';
                 $i = 0;
+                $timeStart = 0;
                 foreach ($trackPath as $key=>$value) {
                     $trackPath[$key] = explode(",", $value);
                     if ($key != 0 && !empty($trackPath[$key][0])) {
                         if ($i != 0) {
                             $polyline .= ', ';
+                        } elseif ($i == 0) {
+                            $timeStart = strtotime($trackPath[$key][0]);
+                        } else {
+
                         }
                         $i ++;
+
                         $polyline .= ' [ '
                             .$trackPath[$key][1].', ' //lat
                             .$trackPath[$key][2].', ' //lon
                             .$trackPath[$key][3] //elevation
-                            .' ]';
+                            .' ] ';
+
+                    } else {
+                        unset ($trackPath[$key]);
                     }
                 }
                 $polyline = '['.$polyline.']';
                 $output = array();
                 $output['polyline'] = json_decode($polyline);
+
+                $output['trackFull'] = $trackPath;
+                $output['points'] = count($trackPath);
+                $stopPoint = array_pop($trackPath);
+                $output['timeStart'] = $timeStart;
+                $output['timeStop'] = strtotime($stopPoint[0]);
+                $output['timeFull'] = $output['timeStop'] - $output['timeStart'];
                 echo json_encode($output);
             } else {
 
@@ -448,6 +467,11 @@ class GPSTrackingBlog {
                 echo $track_id->get_error_message();
             } else {
                 add_post_meta($track_id, 'track_data', $_POST['track']);
+
+                add_post_meta($track_id, 'track_data_time_full', $_POST['track_data_simple']['time_full']);
+//                add_post_meta($track_id, 'track_data_time_start', $_POST['track_data_simple']['']);
+//                add_post_meta($track_id, 'track_data_time_full', $_POST['track_data_simple']['']);
+//                add_post_meta($track_id, 'track_data_time_full', $_POST['track_data_simple']['']);
                 echo $track_id;
 
             }

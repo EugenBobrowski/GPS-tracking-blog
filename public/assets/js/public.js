@@ -6,7 +6,6 @@
             $('.gmap3').each(function(){
                 var $map = $(this);
                 var track = $map.data('track');
-                console.log(track);
                 if (track == undefined ||
                     track === "" ||
                     track === 0   ||
@@ -17,9 +16,20 @@
                     $map.gmap3();
                 } else {
                     $map.gmap3({
+                        map:{
+                            options:{
+                                mapTypeControl: true,
+                                mapTypeControlOptions: {
+                                    style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
+                                },
+                                navigationControl: false,
+                                scrollwheel: false,
+                                streetViewControl: true
+                            }
+                        },
                         polyline:{
                             options:{
-                                strokeColor: "#FF0000",
+                                strokeColor: "#FF5522",
                                 strokeOpacity: 1.0,
                                 strokeWeight: 2,
                                 path: track.polyline
@@ -43,7 +53,6 @@
 
                     // Only process image files.
                     if (!(fileType.match('text.*') || (fileType == ''))) {
-                        console.log('fuck da file!', fileType);
                         return ;
                     }
 
@@ -60,6 +69,7 @@
                             var data = {
                                 'action': 'gps_filerende_ajax',
                                 'subaction': 'updateMap',
+                                'chickenhut': $('#gpsChickenhut').val(),
                                 'trackfilemimetype': fileType,
                                 'fileName': fileName,
                                 'track': e.target.result
@@ -67,7 +77,6 @@
 
                             // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
                             jQuery.post(ajax_object.ajax_url, data, function(response) {
-//                                console.log(response);
 
                                 $('#gpsTrackContent').val(response)
 
@@ -86,7 +95,6 @@
                                 });
                                 setTimeout(function(){
                                     $('#gpsTrackFile').val('');
-                                    console.log($('#gpsTrackContent').val());
                                 }, 2000);
 
 
@@ -98,13 +106,22 @@
                     reader.readAsText(f);
                 }
                 $('#submitTrackForm').submit(function(){
-                    console.log($('#gpsTrackContent').val());
+                    var track_json = $('#gpsTrackContent').val();
+                    var track_obj = JSON.parse(track_json);
                     var data = {
                         'action': 'gps_filerende_ajax',
                         'subaction': 'submit',
+                        'chickenhut': $('#gpsChickenhut').val(),
                         'title': $('#gpsTrackTitle').val(),
                         'description': $('#gpsTrackDescription').val(),
-                        'track': $('#gpsTrackContent').val()
+                        'track': track_json,
+                        'track_data_simple': {
+                            'time_full': track_obj.timeFull,
+                            'time_start': track_obj.timeStart,
+                            'time_stop': track_obj.timeStop,
+                            'points': track_obj.points
+                        }
+
 
                     };
 
