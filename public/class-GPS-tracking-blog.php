@@ -289,17 +289,27 @@ class GPSTrackingBlog {
             array(),
             '5'
         );
+
         wp_enqueue_script(
             'gmap3',
             plugins_url( 'assets/js/gmap3.min.js', __FILE__ ),
             array('jquery', 'google-maps'),
-            self::VERSION
+            self::VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'jquery-canvas-js',
+            plugins_url( 'assets/js/jquery.canvasjs.min.js', __FILE__ ),
+            array('jquery'),
+            self::VERSION,
+            true
         );
         wp_enqueue_script(
             'gmap-public',
             plugins_url( 'assets/js/public.js', __FILE__ ),
-            array('jquery', 'google-maps', 'gmap3'),
-            self::VERSION
+            array('jquery', 'google-maps', 'gmap3', 'jquery-canvas-js'),
+            self::VERSION,
+            true
         );
         // in JavaScript, object properties are accessed as ajax_object.ajax_url, ajax_object.we_value
         wp_localize_script( 'gmap-public', 'ajax_object',
@@ -450,11 +460,17 @@ class GPSTrackingBlog {
 
                             $trackPath[$key]['distance'] = $S;
                             $trackPath[$key]['distanceFull'] = $S + $trackPath[$key - 1]['distanceFull'];
-
+                            $trackPath[$key]['speed'] = ($S * 3600) / (1000 * (strtotime($trackPath[$key][0]) - strtotime($trackPath[$key - 1][0])));
+                            $trackPath[$key]['speed_ms'] = ($S ) / ((strtotime($trackPath[$key][0]) - strtotime($trackPath[$key - 1][0])));
+                            /**
+                             * Все что медленнее одного км/час стоит
+                             * Все что до 6 км час идет
+                             */
 
                         } else {
                             $trackPath[$key]['distance'] = 0;
                             $trackPath[$key]['distanceFull'] = 0;
+                            $trackPath[$key]['speed'] = 0;
                         }
                         $polyline .= ' [ '
                             .$trackPath[$key][1].', ' //lat

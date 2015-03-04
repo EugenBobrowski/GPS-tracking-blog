@@ -15,6 +15,7 @@
                     ( ( track instanceof Array ) && track.length === 0 ) ) {
                     $map.gmap3();
                 } else {
+
                     var lineSymbol = {
                         path: 'M 0,-1 0,1',
                         strokeOpacity: 1,
@@ -49,6 +50,40 @@
                         },
                         autofit:{}
                     });
+                    var dataPointss = [];
+                    var tmp_obj = track.trackFull;
+                    for(var i in tmp_obj) {
+                        if (!tmp_obj.hasOwnProperty(i)) continue;
+//                        console.log(new Date(tmp_obj[i][0]));
+                        dataPointss.push({x: new Date(tmp_obj[i][0]), y: tmp_obj[i].distance});
+                    }
+                    console.log(dataPointss);
+                    $map.after('<div id="chartContainer" style="height: 300px; width: 100%;">');
+                    var chart = new CanvasJS.Chart("chartContainer",
+                        {
+                            axisX:{
+                                interval: 3,
+                                labelAngle : 60,
+                                valueFormatString: "HH:mm",
+                                gridThickness: 1,
+                                tickThickness: 1
+                            },
+                            axisY:{
+                                gridThickness: 1,
+                                tickThickness: 1
+                            },
+                            data: [
+                                {
+                                    type: "area",
+//                                    dataPoints: [dataPointss]
+                                    dataPoints: dataPointss
+                                }
+                            ]
+                        });
+
+                    chart.render();
+
+
                 }
 
             });
