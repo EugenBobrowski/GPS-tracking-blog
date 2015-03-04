@@ -15,6 +15,12 @@
                     ( ( track instanceof Array ) && track.length === 0 ) ) {
                     $map.gmap3();
                 } else {
+                    var lineSymbol = {
+                        path: 'M 0,-1 0,1',
+                        strokeOpacity: 1,
+                        scale: 4
+                    };
+
                     $map.gmap3({
                         map:{
                             options:{
@@ -30,8 +36,14 @@
                         polyline:{
                             options:{
                                 strokeColor: "#FF5522",
-                                strokeOpacity: 1.0,
+//                                strokeOpacity: 1.0,
                                 strokeWeight: 2,
+                                strokeOpacity: 0.5,
+                                icons: [{
+                                    icon: lineSymbol,
+                                    offset: '0',
+                                    repeat: '20px'
+                                }],
                                 path: track.polyline
                             }
                         },
@@ -77,12 +89,12 @@
 
                             // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
                             jQuery.post(ajax_object.ajax_url, data, function(response) {
+                                console.log(response);
 
-                                $('#gpsTrackContent').val(response)
+                                $('#gpsTrackContent').val(response);
 
                                 var obj = JSON.parse(response);
-
-                                $("#formMap").gmap3({
+                                $("#formMap").gmap3('destroy').gmap3({
                                     polyline:{
                                         options:{
                                             strokeColor: "#FF0000",
@@ -94,8 +106,8 @@
                                     autofit:{}
                                 });
                                 setTimeout(function(){
-                                    $('#gpsTrackFile').val('');
-                                }, 2000);
+                                    $('#labelFileName').text(fileName);
+                                }, 1000);
 
 
                             });
@@ -119,6 +131,7 @@
                             'time_full': track_obj.timeFull,
                             'time_start': track_obj.timeStart,
                             'time_stop': track_obj.timeStop,
+                            'distance': track_obj.distanceFull,
                             'points': track_obj.points
                         }
 

@@ -391,14 +391,16 @@ class GPSTrackingBlog {
             <label for="gpsTrackDescription">Description</label>
             <textarea class="form-control" rows="3" id="gpsTrackDescription" placeholder="Type here your story"></textarea>
           </div>
-          <div class="form-group">
-            <label for="gpsTrackFile">File input</label>
-            <input type="file" id="gpsTrackFile" multiple >
-            <input type="hidden" id="gpsTrackContent" name="gpstrack[trackdata]">
+          <div class="form-group file-to-map">
+          <label for="gpsTrackFile">
+            <span class="glyphicon glyphicon-floppy-open"></span> Upload track file <span id="labelFileName"></span>
 
-            <p class="help-block">Example block-level help text here.</p>
+            <input type="file" id="gpsTrackFile">
+          </label>
+            <input type="hidden" id="gpsTrackContent" name="gpstrack[trackdata]">
+            <div id="formMap" class="gmap3" style="width: 100%; height: 300px"></div>
           </div>
-          <div id="formMap" class="gmap3" style="width: 100%; height: 300px"></div>
+
           <button type="submit" class="btn btn-default">Submit</button>
         </form>';
 
@@ -417,6 +419,10 @@ class GPSTrackingBlog {
                 $polyline = '';
                 $i = 0;
                 $timeStart = 0;
+                $prevLat = null;
+                $prevLon = null;
+                $earthCircle = 6371000 * M_PI * 2;
+                $unitLat = $earthCircle / 360;
                 foreach ($trackPath as $key=>$value) {
                     $trackPath[$key] = explode(",", $value);
                     if ($key != 0 && !empty($trackPath[$key][0])) {
@@ -428,7 +434,28 @@ class GPSTrackingBlog {
 
                         }
                         $i ++;
+                        if (!empty($trackPath[$key-1])) {
 
+                            $elevCorrection = $trackPath[$key][3] * M_PI * 2 / 360;
+
+
+                            $unitLon = cos(M_PI/180*$trackPath[$key][1]) * ($unitLat + $elevCorrection);
+                            $deltaLat = $trackPath[$key][1] - $trackPath[$key-1][1];
+                            $deltaLon = $trackPath[$key][2] - $trackPath[$key-1][2];
+                            $deltaElevation = $trackPath[$key][3] - $trackPath[$key-1][3];
+                            $sLat = ($unitLat + $elevCorrection) * $deltaLat;
+                            $sLon = $unitLon * $deltaLon;
+                            $S = sqrt(pow($sLat, 2) + pow($sLon, 2) + pow($deltaElevation, 2));
+
+
+                            $trackPath[$key]['distance'] = $S;
+                            $trackPath[$key]['distanceFull'] = $S + $trackPath[$key - 1]['distanceFull'];
+
+
+                        } else {
+                            $trackPath[$key]['distance'] = 0;
+                            $trackPath[$key]['distanceFull'] = 0;
+                        }
                         $polyline .= ' [ '
                             .$trackPath[$key][1].', ' //lat
                             .$trackPath[$key][2].', ' //lon
@@ -449,6 +476,7 @@ class GPSTrackingBlog {
                 $output['timeStart'] = $timeStart;
                 $output['timeStop'] = strtotime($stopPoint[0]);
                 $output['timeFull'] = $output['timeStop'] - $output['timeStart'];
+                $output['distanceFull'] = $stopPoint['distanceFull'];
                 echo json_encode($output);
             } else {
 
@@ -469,9 +497,9 @@ class GPSTrackingBlog {
                 add_post_meta($track_id, 'track_data', $_POST['track']);
 
                 add_post_meta($track_id, 'track_data_time_full', $_POST['track_data_simple']['time_full']);
-//                add_post_meta($track_id, 'track_data_time_start', $_POST['track_data_simple']['']);
-//                add_post_meta($track_id, 'track_data_time_full', $_POST['track_data_simple']['']);
-//                add_post_meta($track_id, 'track_data_time_full', $_POST['track_data_simple']['']);
+                add_post_meta($track_id, 'track_data_time_start', $_POST['track_data_simple']['time_start']);
+                add_post_meta($track_id, 'track_data_time_stop', $_POST['track_data_simple']['time_stop']);
+                add_post_meta($track_id, 'track_data_distance', $_POST['track_data_simple']['distance']);
                 echo $track_id;
 
             }
