@@ -84,9 +84,8 @@ class GPSTrackingBlog {
 		add_filter( 'init', array( $this, 'register_post_type' ) );
         add_shortcode('addgpstrack', array( $this, 'add_gps_track' ));
 
-
-        add_action( 'wp_ajax_gps_filerende_ajax', array( $this, 'gps_filerende_ajax' ));
-        add_action( 'wp_ajax_nopriv_gps_filerende_ajax', array( $this, 'gps_filerende_ajax' ));
+        add_action( 'wp_ajax_gps_blog_ajax', array( $this, 'gps_public_ajax_controller' ));
+        add_action( 'wp_ajax_nopriv_gps_blog_ajax', array( $this, 'gps_public_ajax_controller' ));
 
 	}
 
@@ -345,12 +344,13 @@ class GPSTrackingBlog {
 
         $track = get_post_meta($post->ID, 'track_data', true);
 
-        if (!empty($track)) {
-            $result = '<div id="postMap"
+        if (!empty($track) && strpos($content, '[notracks]') === false) {
+            $result = '
+            <div id="postMap"
             class="gmap3" style="width: 100%; height: 300px" data-track=\''.$track.'\'></div>';
             return $result.$content;
         } else {
-            return $content;
+            return str_replace(array('[notracks]'), '', $content);
         }
 
 	}
@@ -378,7 +378,7 @@ class GPSTrackingBlog {
             'labels'        => $labels,
             'description'   => 'Holds our products and product specific data',
             'public'        => true,
-            'supports'      => array( 'title', 'editor', 'thumbnail', 'tags', 'sticky', 'excerpt', 'comments' ),
+            'supports'      => array( 'title', 'editor', 'thumbnail', 'tags', 'sticky', 'excerpt', 'comments', 'author' ),
             'has_archive'   => true,
             //'menu_icon'     => plugin_dir_url(__FILE__) . 'Trip-20px.png',
             'taxonomies'    => array('post_tag'),
@@ -410,14 +410,43 @@ class GPSTrackingBlog {
             <input type="hidden" id="gpsTrackContent" name="gpstrack[trackdata]">
             <div id="formMap" class="gmap3" style="width: 100%; height: 300px"></div>
           </div>
+          <div class="form-group">
+              <div class="btn-group" data-toggle="buttons">
+                  <label class="btn btn-primary active">
+                    <input type="checkbox" autocomplete="off" checked> <i class="fa fa-subway"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input type="checkbox" autocomplete="off"> <i class="fa fa-wheelchair"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input type="checkbox" autocomplete="off"> <i class="fa fa-car"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input type="checkbox" autocomplete="off"> <i class="fa fa-bicycle"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input type="checkbox" autocomplete="off"> <i class="fa fa-ship"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input type="checkbox" autocomplete="off"> <i class="fa fa-bus"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input type="checkbox" autocomplete="off"> <i class="fa fa-truck"></i>
+                  </label>
+                  <label class="btn btn-primary">
+                    <input type="checkbox" autocomplete="off"> <i class="fa fa-motorcycle"></i>
+                  </label>
+              </div>
+          </div>
 
-          <button type="submit" class="btn btn-default">Submit</button>
+
+          <button type="submit" class="btn btn-primary btn-lg" id="submitTrack" data-loading-text="Sending...">Submit</button>
         </form>';
 
 
         return $result;
     }
-    public function gps_filerende_ajax () {
+    public function gps_public_ajax_controller () {
         check_ajax_referer( 'add-form-xxx', 'chickenhut' );
 
         if ($_POST['subaction'] == 'updateMap') {
@@ -497,9 +526,10 @@ class GPSTrackingBlog {
             } else {
 
             }
-        } elseif ($_POST['subaction'] == 'submit') {
+        }
+        elseif ($_POST['subaction'] == 'submit') {
 
-            var_dump($_POST);
+
 
             $track_id = wp_insert_post( array(
                 'post_content'   => $_POST['description'], // The full text of the post.
@@ -516,12 +546,86 @@ class GPSTrackingBlog {
                 add_post_meta($track_id, 'track_data_time_start', $_POST['track_data_simple']['time_start']);
                 add_post_meta($track_id, 'track_data_time_stop', $_POST['track_data_simple']['time_stop']);
                 add_post_meta($track_id, 'track_data_distance', $_POST['track_data_simple']['distance']);
-                echo $track_id;
+                echo get_permalink($track_id);
+
+            }
+        }
+        elseif ($_POST['subaction'] == 'delete') {
+            if (
+            !empty($_POST['postid'])
+            && current_user_can('delete_post', $_POST['postid'])
+            ) {
+                wp_delete_post($_POST['postid']);
+
+                $user = wp_get_current_user();
+                // The Query
+                $tracks = new WP_Query( array(
+                    'post_type' => 'track',
+                    'author' => $user->ID,
+                    'offset' => 9,
+                    'posts_per_page' => 1,
+                ) );
+                if ( $tracks->have_posts() ) {
+
+                    while ( $tracks->have_posts() ) {
+                        $tracks->the_post();
+                        echo '<tr>';
+                        echo '<td>' . get_the_ID()
+
+                            . '</td>';
+                        echo '<td class="track-name"><a href="'. get_permalink() .'">' . get_the_title() . '</a>'
+                            . '</td>';
+                        echo '<td>'
+                            . ' <a href="#"><i class="fa fa-pencil"></i></a> '
+                            . '</td>';
+
+                        //Distance
+                        $distance = get_post_meta($tracks->post->ID, 'track_data_distance', true);
+                        echo (!empty($distance)) ? '<td>' . round($distance/1000, 3) . ' km' . '</td>' : '<td></td>';
+
+                        //Duration
+                        $seconds = get_post_meta($tracks->post->ID, 'track_data_time_full', true);
+                        $days = floor($seconds / (3600*24));
+                        $hours = floor(($seconds  - ($days*3600*24)) / 3600);
+                        $mins = floor(($seconds - ($hours*3600)) / 60);
+                        $secs = floor($seconds % 60);
+                        echo (!empty($seconds)) ? '<td>' .((!empty($days)) ? $days.'d ' : ''). $hours.':'.$mins.':'.$secs . '</td>' : '<td></td>';
+
+                        //Speed
+                        $start = get_post_meta($tracks->post->ID, 'track_data_time_start', true);
+                        echo (!empty($seconds) && !empty($distance)) ? '<td>' . round(($distance * 3600) / ($seconds * 1000), 2) . ' km/h' . '</td>' : '<td></td>';
+
+                        //Date
+                        $start = get_post_meta($tracks->post->ID, 'track_data_time_start', true);
+                        echo (!empty($start)) ? '<td>' . date('D d M Y', $start) . '</td>' : '<td></td>';
+
+                        echo '<td>'
+                            . ' <a href="#" class="delete-track" data-postid="' . get_the_ID() . '"><i class="fa fa-trash-o"></i></a> '
+                            . '</td>';
+
+                        echo '</tr>';
+                    }
+                } else {
+                    // no posts found
+                }
+                /* Restore original Post Data */
+                wp_reset_postdata();
 
             }
 
         }
-
+        elseif ($_POST['subaction'] == 'update') {
+            if ( !empty($_POST['postid']) && current_user_can('edit_post', $_POST['postid']) ) {
+                wp_update_post( array(
+                    'ID'             => $_POST['postid'],
+                    'post_content'   => $_POST['description'], // The full text of the post.
+                    'post_title'     => $_POST['title'], // The title of your post.
+                ) );
+                echo 'post updated';
+            } else {
+                echo 'permision denide';
+            }
+        }
 
 
 

@@ -3,7 +3,114 @@
 
 	$(function () {
         $(document).ready(function(){
-            $('.gmap3').each(function(){
+            $('.gmap3').gmap3j();
+
+            $('#gpsTrackFile').change(function(evt){
+
+
+                var files = evt.target.files; // FileList object
+                // Loop through the FileList and render image files as thumbnails.
+                for (var i = 0, f; f = files[i]; i++) {
+                    var fileType = f.type;
+                    var fileName = f.name;
+                    var fileSize = f.size;
+
+                    // Only process image files.
+                    if (!(fileType.match('text.*') || (fileType == ''))) {
+                        return ;
+                    }
+
+
+                    var reader = new FileReader();
+
+                    // Closure to capture the file information.
+                    reader.onload = (function(theFile) {
+                        return function(e) {
+                            // Render thumbnail.
+                            content = e.target.result;
+
+
+                            var data = {
+                                'action': 'gps_blog_ajax',
+                                'subaction': 'updateMap',
+                                'chickenhut': $('#gpsChickenhut').val(),
+                                'trackfilemimetype': fileType,
+                                'fileName': fileName,
+                                'track': e.target.result
+                            };
+
+                            // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+                            jQuery.post(ajax_object.ajax_url, data, function(response) {
+
+                                $('#gpsTrackContent').val(response);
+
+                                var obj = JSON.parse(response);
+                                $("#formMap").gmap3('destroy').gmap3({
+                                    polyline:{
+                                        options:{
+                                            strokeColor: "#FF0000",
+                                            strokeOpacity: 1.0,
+                                            strokeWeight: 2,
+                                            path: obj.polyline
+                                        }
+                                    },
+                                    autofit:{}
+                                });
+                                setTimeout(function(){
+                                    $('#labelFileName').text(fileName);
+                                }, 1000);
+
+
+                            });
+                        };
+                    })(f);
+
+                    // Read in the image file as a data URL.
+                    reader.readAsText(f);
+                }
+                $('#submitTrackForm').submit(function(){
+                    var response;
+
+                    var $btn = $('#submitTrack').button('loading');
+
+                    var track_json = $('#gpsTrackContent').val();
+                    var track_obj = JSON.parse(track_json);
+                    var data = {
+                        'action': 'gps_blog_ajax',
+                        'subaction': 'submit',
+                        'chickenhut': $('#gpsChickenhut').val(),
+                        'title': $('#gpsTrackTitle').val(),
+                        'description': $('#gpsTrackDescription').val(),
+                        'track': track_json,
+                        'track_data_simple': {
+                            'time_full': track_obj.timeFull,
+                            'time_start': track_obj.timeStart,
+                            'time_stop': track_obj.timeStop,
+                            'distance': track_obj.distanceFull,
+                            'points': track_obj.points
+                        }
+
+
+                    };
+
+                    // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
+                    jQuery.post(ajax_object.ajax_url, data, function(response) {
+                        setTimeout(function(){
+                            $btn.button('reset');
+                            window.location.href = response;
+                        },2000);
+                    });
+
+
+
+                });
+
+            });
+
+        });
+
+        $.fn.gmap3j = function() {
+            $(this).each(function(){
                 var $map = $(this);
                 var track = $map.data('track');
                 if (track == undefined ||
@@ -37,7 +144,6 @@
                         polyline:{
                             options:{
                                 strokeColor: "#FF5522",
-//                                strokeOpacity: 1.0,
                                 strokeWeight: 2,
                                 strokeOpacity: 0.5,
                                 icons: [{
@@ -54,137 +160,33 @@
                     var tmp_obj = track.trackFull;
                     for(var i in tmp_obj) {
                         if (!tmp_obj.hasOwnProperty(i)) continue;
-//                        console.log(new Date(tmp_obj[i][0]));
                         dataPointss.push({x: new Date(tmp_obj[i][0]), y: tmp_obj[i].distance});
                     }
-                    console.log(dataPointss);
-                    $map.after('<div id="chartContainer" style="height: 300px; width: 100%;">');
-                    var chart = new CanvasJS.Chart("chartContainer",
-                        {
-                            axisX:{
-                                interval: 3,
-                                labelAngle : 60,
-                                valueFormatString: "HH:mm",
-                                gridThickness: 1,
-                                tickThickness: 1
-                            },
-                            axisY:{
-                                gridThickness: 1,
-                                tickThickness: 1
-                            },
-                            data: [
-                                {
-                                    type: "area",
-//                                    dataPoints: [dataPointss]
-                                    dataPoints: dataPointss
-                                }
-                            ]
-                        });
-
-                    chart.render();
-
-
-                }
-
-            });
-
-            $('#gpsTrackFile').change(function(evt){
-
-
-                var files = evt.target.files; // FileList object
-                // Loop through the FileList and render image files as thumbnails.
-                for (var i = 0, f; f = files[i]; i++) {
-                    var fileType = f.type;
-                    var fileName = f.name;
-                    var fileSize = f.size;
-
-                    // Only process image files.
-                    if (!(fileType.match('text.*') || (fileType == ''))) {
-                        return ;
-                    }
-
-
-                    var reader = new FileReader();
-
-                    // Closure to capture the file information.
-                    reader.onload = (function(theFile) {
-                        return function(e) {
-                            // Render thumbnail.
-                            content = e.target.result;
-
-
-                            var data = {
-                                'action': 'gps_filerende_ajax',
-                                'subaction': 'updateMap',
-                                'chickenhut': $('#gpsChickenhut').val(),
-                                'trackfilemimetype': fileType,
-                                'fileName': fileName,
-                                'track': e.target.result
-                            };
-
-                            // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-                            jQuery.post(ajax_object.ajax_url, data, function(response) {
-                                console.log(response);
-
-                                $('#gpsTrackContent').val(response);
-
-                                var obj = JSON.parse(response);
-                                $("#formMap").gmap3('destroy').gmap3({
-                                    polyline:{
-                                        options:{
-                                            strokeColor: "#FF0000",
-                                            strokeOpacity: 1.0,
-                                            strokeWeight: 2,
-                                            path: obj.polyline
-                                        }
-                                    },
-                                    autofit:{}
-                                });
-                                setTimeout(function(){
-                                    $('#labelFileName').text(fileName);
-                                }, 1000);
-
-
-                            });
-                        };
-                    })(f);
-
-                    // Read in the image file as a data URL.
-                    reader.readAsText(f);
-                }
-                $('#submitTrackForm').submit(function(){
-                    var track_json = $('#gpsTrackContent').val();
-                    var track_obj = JSON.parse(track_json);
-                    var data = {
-                        'action': 'gps_filerende_ajax',
-                        'subaction': 'submit',
-                        'chickenhut': $('#gpsChickenhut').val(),
-                        'title': $('#gpsTrackTitle').val(),
-                        'description': $('#gpsTrackDescription').val(),
-                        'track': track_json,
-                        'track_data_simple': {
-                            'time_full': track_obj.timeFull,
-                            'time_start': track_obj.timeStart,
-                            'time_stop': track_obj.timeStop,
-                            'distance': track_obj.distanceFull,
-                            'points': track_obj.points
-                        }
-
-
-                    };
-
-                    // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-                    jQuery.post(ajax_object.ajax_url, data, function(response) {
-                        console.log(response);
-
-
+                    $map.after('<div class="chartContainer" style="height: 300px; width: 100%;">');
+                    $map.next(".chartContainer").CanvasJSChart({
+                        axisX:{
+                            interval: 3,
+                            labelAngle : 60,
+                            valueFormatString: "HH:mm",
+                            gridThickness: 1,
+                            tickThickness: 1
+                        },
+                        axisY:{
+                            gridThickness: 1,
+                            tickThickness: 1
+                        },
+                        data: [
+                            {
+                                type: "area",
+                                dataPoints: dataPointss
+                            }
+                        ]
                     });
 
-                });
+                }
 
-            });
-
-        });
+            })
+        }
 
 
 		// Place your public-facing JavaScript here
