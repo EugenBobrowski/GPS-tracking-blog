@@ -103,14 +103,16 @@ class TrackRender {
         $trackPoints = array();
         $i = 0;
         foreach ($track->trk->trkseg->trkpt as $point) {
+            if (!isset($point->ele)) continue;
             $key = $i++;
+
             $trackPoints[$key] = array (
                 'time'  => ''.$point->time,
                 'lat'   => ''.$point['lat'],
                 'lon'   => ''.$point['lon'],
+                'ele'   => ''.$point->ele,
             );
 
-            if (isset($point->ele)) $trackPoints[$key]['ele'] = ''.$point->ele;
             if (isset($point->course)) $trackPoints[$key]['krs'] = ''.$point->course;
             if (isset($point->src)) $trackPoints[$key]['src'] = ''.$point->src;
             if (isset($point->sat)) $trackPoints[$key]['sat'] = ''.$point->sat;
