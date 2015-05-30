@@ -454,77 +454,15 @@ class GPSTrackingBlog {
             $filexp = explode('.',$_POST['fileName']);
             $ext = array_pop($filexp);
             if ($ext  == 'txt') {
-                $trackPath = explode(PHP_EOL, $_POST['track']);
-                $polyline = '';
-                $i = 0;
-                $timeStart = 0;
-                $prevLat = null;
-                $prevLon = null;
-                $earthCircle = 6371000 * M_PI * 2;
-                $unitLat = $earthCircle / 360;
-                foreach ($trackPath as $key=>$value) {
-                    $trackPath[$key] = explode(",", $value);
-                    if ($key != 0 && !empty($trackPath[$key][0])) {
-                        if ($i != 0) {
-                            $polyline .= ', ';
-                        } elseif ($i == 0) {
-                            $timeStart = strtotime($trackPath[$key][0]);
-                        } else {
-
-                        }
-                        $i ++;
-                        if (!empty($trackPath[$key-1])) {
-
-                            $elevCorrection = $trackPath[$key][3] * M_PI * 2 / 360;
-
-
-                            $unitLon = cos(M_PI/180*$trackPath[$key][1]) * ($unitLat + $elevCorrection);
-                            $deltaLat = $trackPath[$key][1] - $trackPath[$key-1][1];
-                            $deltaLon = $trackPath[$key][2] - $trackPath[$key-1][2];
-                            $deltaElevation = $trackPath[$key][3] - $trackPath[$key-1][3];
-                            $sLat = ($unitLat + $elevCorrection) * $deltaLat;
-                            $sLon = $unitLon * $deltaLon;
-                            $S = sqrt(pow($sLat, 2) + pow($sLon, 2) + pow($deltaElevation, 2));
-
-
-                            $trackPath[$key]['distance'] = $S;
-                            $trackPath[$key]['distanceFull'] = $S + $trackPath[$key - 1]['distanceFull'];
-                            $trackPath[$key]['speed'] = ($S * 3600) / (1000 * (strtotime($trackPath[$key][0]) - strtotime($trackPath[$key - 1][0])));
-                            $trackPath[$key]['speed_ms'] = ($S ) / ((strtotime($trackPath[$key][0]) - strtotime($trackPath[$key - 1][0])));
-                            /**
-                             * Все что медленнее одного км/час стоит
-                             * Все что до 6 км час идет
-                             */
-
-                        } else {
-                            $trackPath[$key]['distance'] = 0;
-                            $trackPath[$key]['distanceFull'] = 0;
-                            $trackPath[$key]['speed'] = 0;
-                        }
-                        $polyline .= ' [ '
-                            .$trackPath[$key][1].', ' //lat
-                            .$trackPath[$key][2].', ' //lon
-                            .$trackPath[$key][3] //elevation
-                            .' ] ';
-
-                    } else {
-                        unset ($trackPath[$key]);
-                    }
-                }
-                $polyline = '['.$polyline.']';
-                $output = array();
-                $output['polyline'] = json_decode($polyline);
-
-                $output['trackFull'] = $trackPath;
-                $output['points'] = count($trackPath);
-                $stopPoint = array_pop($trackPath);
-                $output['timeStart'] = $timeStart;
-                $output['timeStop'] = strtotime($stopPoint[0]);
-                $output['timeFull'] = $output['timeStop'] - $output['timeStart'];
-                $output['distanceFull'] = $stopPoint['distanceFull'];
-                echo json_encode($output);
-            } else {
-
+                require_once 'class-track-render.php';
+                $track = new TrackRender;
+                $track->srting = $_POST['track'];
+                echo $track->txt();
+            } elseif  ($ext  == 'gpx') {
+                require_once 'class-track-render.php';
+                $track = new TrackRender;
+                $track->srting = $_POST['track'];
+                echo $track->gpx();
             }
         }
         elseif ($_POST['subaction'] == 'submit') {

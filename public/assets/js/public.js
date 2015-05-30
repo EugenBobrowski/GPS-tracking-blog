@@ -41,7 +41,8 @@
 
                             // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
                             jQuery.post(ajax_object.ajax_url, data, function(response) {
-
+                                console.log(response);
+/**/
                                 $('#gpsTrackContent').val(response);
 
                                 var obj = JSON.parse(response);
@@ -59,7 +60,7 @@
                                 setTimeout(function(){
                                     $('#labelFileName').text(fileName);
                                 }, 1000);
-
+/**/
 
                             });
                         };
