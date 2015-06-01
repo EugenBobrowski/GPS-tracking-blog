@@ -163,7 +163,7 @@
                     var tmp_obj = track.trackFull;
                     for(var i in tmp_obj) {
                         if (!tmp_obj.hasOwnProperty(i)) continue;
-                        dataPointss.push({x: new Date(tmp_obj[i][0]), y: tmp_obj[i].distance});
+                        dataPointss.push({x: new Date(tmp_obj[i]['time']), y: tmp_obj[i].distance});
                     }
                     $map.after('<div class="chartContainer" style="height: 300px; width: 100%;">');
                     $map.next(".chartContainer").CanvasJSChart({
