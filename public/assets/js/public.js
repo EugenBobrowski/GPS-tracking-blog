@@ -88,6 +88,8 @@
                             'time_start': track_obj.timeStart,
                             'time_stop': track_obj.timeStop,
                             'distance': track_obj.distanceFull,
+                            'upHill': track_obj.upHill,
+                            'downHill': track_obj.downHill,
                             'points': track_obj.points
                         }
 

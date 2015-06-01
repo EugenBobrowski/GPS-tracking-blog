@@ -484,6 +484,8 @@ class GPSTrackingBlog {
                 add_post_meta($track_id, 'track_data_time_start', $_POST['track_data_simple']['time_start']);
                 add_post_meta($track_id, 'track_data_time_stop', $_POST['track_data_simple']['time_stop']);
                 add_post_meta($track_id, 'track_data_distance', $_POST['track_data_simple']['distance']);
+                add_post_meta($track_id, 'track_data_upHill', $_POST['track_data_simple']['upHill']);
+                add_post_meta($track_id, 'track_data_downHill', $_POST['track_data_simple']['downHill']);
                 echo get_permalink($track_id);
 
             }

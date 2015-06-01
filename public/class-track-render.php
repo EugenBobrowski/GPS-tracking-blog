@@ -7,94 +7,54 @@
  */
 class TrackRender {
     public $srting;
-    public function xtxt () {
+
+    public function get_txt () {
         $stringPointsArray = explode(PHP_EOL, $this->srting);
-        $response = array();
+        $trackPoints = array();
         $keys = array();
         foreach ($stringPointsArray as $key=>$value) {
-            if (!empty($value)) {
+            $trackPoint = explode(",", $value);//time,lat,lon,elevation,accuracy,bearing,speed
+            if (!empty($value) && count($trackPoint) > 3) {
                 if (empty($keys) && (strpos($value, 'lat') !== false) && (strpos($value, 'lon') !== false)) {
+                    foreach ($trackPoint as $keyt=>$title) {
+                        if (strpos($title, 'time') !== false) {
+                            $keys['time'] = $keyt;
+                        } elseif (strpos($title, 'lat') !== false) {
+                            $keys['lat'] = $keyt;
 
+                        } elseif (strpos($title, 'lon') !== false) {
+                            $keys['lon'] = $keyt;
+
+                        } elseif (strpos($title, 'ele') !== false) {
+                            $keys['ele'] = $keyt;
+                        } elseif (strpos($title, 'accuracy') !== false) {
+                            $keys['accuracy'] = $keyt;
+                        } elseif (strpos($title, 'bearing') !== false) {
+                            $keys['krs'] = $keyt;
+                        }
+                    }
+                } else {
+                    $thisPoint = array(
+                        'time'  => $trackPoint[$keys['time']],
+                        'lat'   => $trackPoint[$keys['lat']],
+                        'lon'   => $trackPoint[$keys['lon']],
+                        'ele'   => $trackPoint[$keys['ele']],
+                    );
+                    if (isset($trackPoint[$keys['krs']]))  $thisPoint['krs'] = $trackPoint[$keys['krs']];
+                    if (isset($trackPoint[$keys['accuracy']]))  $thisPoint['accuracy'] = $trackPoint[$keys['accuracy']];
+
+                    if ((isset($thisPoint['accuracy']) && $trackPoint[$keys['accuracy']] < 1000 ) || !isset($thisPoint['accuracy'])) {
+                        $trackPoints[] = $thisPoint;
+                    }
                 }
             }
-            $trackPath[$key] = explode(",", $value); //time,lat,lon,elevation,accuracy,bearing,speed
-
-
         }
-        return $response;
+        return $trackPoints;
     }
     public function txt () {
-        $trackPath = explode(PHP_EOL, $this->srting);
-        $polyline = '';
-        $i = 0;
-        $timeStart = 0;
-        $prevLat = null;
-        $prevLon = null;
-        $earthCircle = 6371000 * M_PI * 2;
-        $unitLat = $earthCircle / 360;
-        foreach ($trackPath as $key=>$value) {
-            $trackPath[$key] = explode(",", $value);
-            if ($key != 0 && !empty($trackPath[$key][0])) {
-                if ($i != 0) {
-                    $polyline .= ', ';
-                } elseif ($i == 0) {
-                    $timeStart = strtotime($trackPath[$key][0]);
-                } else {
-
-                }
-                $i ++;
-                if (!empty($trackPath[$key-1])) {
-
-                    $elevCorrection = $trackPath[$key][3] * M_PI * 2 / 360;
-
-
-                    $unitLon = cos(M_PI/180*$trackPath[$key][1]) * ($unitLat + $elevCorrection);
-                    $deltaLat = $trackPath[$key][1] - $trackPath[$key-1][1];
-                    $deltaLon = $trackPath[$key][2] - $trackPath[$key-1][2];
-                    $deltaElevation = $trackPath[$key][3] - $trackPath[$key-1][3];
-                    $sLat = ($unitLat + $elevCorrection) * $deltaLat;
-                    $sLon = $unitLon * $deltaLon;
-                    $S = sqrt(pow($sLat, 2) + pow($sLon, 2) + pow($deltaElevation, 2));
-
-
-                    $trackPath[$key]['distance'] = $S;
-                    $trackPath[$key]['distanceFull'] = $S + $trackPath[$key - 1]['distanceFull'];
-                    $trackPath[$key]['speed'] = ($S * 3600) / (1000 * (strtotime($trackPath[$key][0]) - strtotime($trackPath[$key - 1][0])));
-                    $trackPath[$key]['speed_ms'] = ($S ) / ((strtotime($trackPath[$key][0]) - strtotime($trackPath[$key - 1][0])));
-                    /**
-                     * Все что медленнее одного км/час стоит
-                     * Все что до 6 км час идет
-                     */
-
-                } else {
-                    $trackPath[$key]['distance'] = 0;
-                    $trackPath[$key]['distanceFull'] = 0;
-                    $trackPath[$key]['speed'] = 0;
-                }
-                $polyline .= ' [ '
-                    .$trackPath[$key][1].', ' //lat
-                    .$trackPath[$key][2].', ' //lon
-                    .$trackPath[$key][3] //elevation
-                    .' ] ';
-
-            } else {
-                unset ($trackPath[$key]);
-            }
-        }
-        $polyline = '['.$polyline.']';
-        $output = array();
-        $output['polyline'] = json_decode($polyline);
-
-        $output['trackFull'] = $trackPath;
-        $output['points'] = count($trackPath);
-        $stopPoint = array_pop($trackPath);
-        $output['timeStart'] = $timeStart;
-        $output['timeStop'] = strtotime($stopPoint[0]);
-        $output['timeFull'] = $output['timeStop'] - $output['timeStart'];
-        $output['distanceFull'] = $stopPoint['distanceFull'];
-        return json_encode($output);
+//        $this->get_txt();
+        return $this->get_track_json($this->get_txt());
     }
-
     /**
      * Return ['trackFull'] element
      */
@@ -135,6 +95,8 @@ class TrackRender {
         $timeStart = 0;
         $prevLat = null;
         $prevLon = null;
+        $upHill = 0;
+        $downHill = 0;
 
         $earthCircle = 6371000 * M_PI * 2;
         $unitLat = $earthCircle / 360;
@@ -161,6 +123,14 @@ class TrackRender {
                 $deltaLon = $trackPoints[$key]['lon'] - $trackPoints[$key-1]['lon'];
                 if (isset($trackPoints[$key]['ele']) && isset($trackPoints[$key-1]['ele'])) {
                     $deltaElevation = $trackPoints[$key]['ele'] - $trackPoints[$key-1]['ele'];
+
+                    if ($deltaElevation < 0 ) {
+                        $downHill += ($deltaElevation);
+                    } elseif ($deltaElevation > 0) {
+                        $upHill += $deltaElevation;
+                    }
+                } else {
+                    $deltaElevation = 0;
                 }
 
                 $sLat = ($unitLat + $elevCorrection) * $deltaLat;
@@ -190,13 +160,14 @@ class TrackRender {
         }
 
         $polyline = '['.$polyline.']';
-//        var_dump(json_decode($polyline));
         $output = array();
         $output['polyline'] = json_decode($polyline);
 
         $output['trackFull'] = $trackPoints;
         $output['points'] = count($trackPoints);
         $stopPoint = array_pop($trackPoints);
+        $output['upHill'] = $upHill;
+        $output['downHill'] = -$downHill;
         $output['timeStart'] = $timeStart;
         $output['timeStop'] = strtotime($stopPoint['time']);
         $output['timeFull'] = $output['timeStop'] - $output['timeStart'];
