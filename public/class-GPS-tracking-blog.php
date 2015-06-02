@@ -83,6 +83,7 @@ class GPSTrackingBlog {
 
 		add_filter( 'init', array( $this, 'register_post_type' ) );
         add_shortcode('addgpstrack', array( $this, 'add_gps_track' ));
+        add_shortcode('trackmap', array( $this, 'trackmap' ));
 
         add_action( 'wp_ajax_gps_blog_ajax', array( $this, 'gps_public_ajax_controller' ));
         add_action( 'wp_ajax_nopriv_gps_blog_ajax', array( $this, 'gps_public_ajax_controller' ));
@@ -346,12 +347,33 @@ class GPSTrackingBlog {
 
         if (!empty($track) && strpos($content, '[notracks]') === false) {
             $result = '
-            <div id="postMap"
+            <div id="'.uniqid('postMap').'"
             class="gmap3" style="width: 100%; height: 300px" data-track=\''.$track.'\'></div>';
             return $result.$content;
         } else {
             return str_replace(array('[notracks]'), '', $content);
         }
+
+	}
+
+    public function trackmap($atts) {
+        $atts = shortcode_atts(
+            array(
+                'id' => 0,
+            ), $atts, 'trackmap' );
+
+        if ($atts == 0) {
+            global $post;
+            $id = $post->ID;
+        } else {
+            $id = $atts['id'];
+        }
+        $track = get_post_meta($post->ID, 'track_data', true);
+
+        $result = '
+        <div id="'.uniqid('postMap').'"
+        class="gmap3" style="width: 100%; height: 300px" data-track=\''.$track.'\'></div>';
+        return $result;
 
 	}
 
@@ -574,5 +596,20 @@ class GPSTrackingBlog {
         wp_die(); // this is required to terminate immediately and return a proper response
     }
 
+
+}
+
+
+function trackmap($id=false, $height='300px', $chart = '1') {
+    if (!$id) {
+        global $post;
+        $id = $post->ID;
+    }
+    $track = get_post_meta($id, 'track_data', true);
+
+    $result = '
+        <div id="'.uniqid('postMap').'"
+        class="gmap3" style="width: 100%; height: '.$height.'" data-track=\''.$track.'\' data-chart="'.$chart.'"></div>';
+    return $result;
 
 }

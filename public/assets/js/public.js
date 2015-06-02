@@ -159,37 +159,52 @@
                         },
                         autofit:{}
                     });
-                    var dataPointss = [];
-                    var tmp_obj = track.trackFull;
-                    for(var i in tmp_obj) {
-                        if (!tmp_obj.hasOwnProperty(i)) continue;
-                        dataPointss.push({x: new Date(tmp_obj[i]['time']), y: tmp_obj[i].distance});
+                    var chart = $map.data('chart');
+                    if (chart == undefined ||
+                        chart === "" ||
+                        chart === 0   ||
+                        chart === "0" ||
+                        chart === null  ||
+                        chart === false  ||
+                        ( ( chart instanceof Array ) && chart.length === 0 ) ) {
+
+                    } else {
+
+                        var dataPointss = [];
+                        var tmp_obj = track.trackFull;
+                        for(var i in tmp_obj) {
+                            if (!tmp_obj.hasOwnProperty(i)) continue;
+                            dataPointss.push({x: new Date(tmp_obj[i]['time']), y: tmp_obj[i].distance});
+
+                        }
+                        $map.after('<div class="chartContainer" style="height: 300px; width: 100%;">');
+
+                        $map.next(".chartContainer").CanvasJSChart({
+                            axisX:{
+                                interval: 3,
+                                labelAngle : 60,
+                                valueFormatString: "HH:mm",
+                                gridThickness: 1,
+                                tickThickness: 1
+                            },
+                            axisY:{
+                                gridThickness: 1,
+                                tickThickness: 1
+                            },
+                            data: [
+                                {
+                                    type: "area",
+                                    dataPoints: dataPointss
+                                }
+                            ]
+                        });
+
                     }
-                    $map.after('<div class="chartContainer" style="height: 300px; width: 100%;">');
-                    $map.next(".chartContainer").CanvasJSChart({
-                        axisX:{
-                            interval: 3,
-                            labelAngle : 60,
-                            valueFormatString: "HH:mm",
-                            gridThickness: 1,
-                            tickThickness: 1
-                        },
-                        axisY:{
-                            gridThickness: 1,
-                            tickThickness: 1
-                        },
-                        data: [
-                            {
-                                type: "area",
-                                dataPoints: dataPointss
-                            }
-                        ]
-                    });
 
                 }
 
             })
-        }
+        };
 
 
 		// Place your public-facing JavaScript here
