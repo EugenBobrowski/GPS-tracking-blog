@@ -135,13 +135,14 @@
                     $map.gmap3({
                         map:{
                             options:{
-                                mapTypeControl: true,
+                                mapTypeId: google.maps.MapTypeId.TERRAIN,
+                                mapTypeControl: false,
                                 mapTypeControlOptions: {
                                     style: google.maps.MapTypeControlStyle.DROPDOWN_MENU
                                 },
                                 navigationControl: false,
                                 scrollwheel: false,
-                                streetViewControl: true
+                                streetViewControl: false
                             }
                         },
                         polyline:{
