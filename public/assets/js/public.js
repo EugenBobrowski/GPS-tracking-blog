@@ -6,7 +6,7 @@
             $('.gmap3').gmap3j();
 
             $('#gpsTrackFile').change(function(evt){
-
+                console.log($('.transport-type-field:checked').val());
 
                 var files = evt.target.files; // FileList object
                 // Loop through the FileList and render image files as thumbnails.
@@ -83,6 +83,7 @@
                         'title': $('#gpsTrackTitle').val(),
                         'description': $('#gpsTrackDescription').val(),
                         'track': track_json,
+                        'transport': $('.transport-type-field:checked').val(),
                         'track_data_simple': {
                             'time_full': track_obj.timeFull,
                             'time_start': track_obj.timeStart,
@@ -95,6 +96,7 @@
 
 
                     };
+                    console.log($('.transport-type-field:checked').val());
 
                     // since 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
                     jQuery.post(ajax_object.ajax_url, data, function(response) {
@@ -161,7 +163,7 @@
                         autofit:{}
                     });
                     var chart = $map.data('chart');
-                    if (chart == undefined ||
+                    if (chart != undefined ||
                         chart === "" ||
                         chart === 0   ||
                         chart === "0" ||

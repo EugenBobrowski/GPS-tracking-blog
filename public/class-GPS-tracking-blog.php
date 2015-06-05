@@ -409,6 +409,16 @@ class GPSTrackingBlog {
             'rewrite' => array('slug' => 'trip'),
         );
         register_post_type( 'track' , $args );
+
+        register_taxonomy(
+            'transport',
+            'track',
+            array(
+                'label' => __( 'Transport' ),
+                'rewrite' => array( 'slug' => 'transport' ),
+                'hierarchical' => false,
+            )
+        );
     }
     public function add_gps_track($atts) {
 
@@ -431,38 +441,33 @@ class GPSTrackingBlog {
           </label>
             <input type="hidden" id="gpsTrackContent" name="gpstrack[trackdata]">
             <div id="formMap" class="gmap3" style="width: 100%; height: 300px"></div>
-          </div>
-          <div class="form-group">
+          </div>';
+
+        $transport = get_terms('transport', array('hide_empty' => false));
+
+        if (!empty($transport)) {
+            $result .='<div class="form-group">
               <div class="btn-group" data-toggle="buttons">
-                  <label class="btn btn-primary active">
-                    <input type="checkbox" autocomplete="off" checked> <i class="fa fa-subway"></i>
-                  </label>
-                  <label class="btn btn-primary">
-                    <input type="checkbox" autocomplete="off"> <i class="fa fa-wheelchair"></i>
-                  </label>
-                  <label class="btn btn-primary">
-                    <input type="checkbox" autocomplete="off"> <i class="fa fa-car"></i>
-                  </label>
-                  <label class="btn btn-primary">
-                    <input type="checkbox" autocomplete="off"> <i class="fa fa-bicycle"></i>
-                  </label>
-                  <label class="btn btn-primary">
-                    <input type="checkbox" autocomplete="off"> <i class="fa fa-ship"></i>
-                  </label>
-                  <label class="btn btn-primary">
-                    <input type="checkbox" autocomplete="off"> <i class="fa fa-bus"></i>
-                  </label>
-                  <label class="btn btn-primary">
-                    <input type="checkbox" autocomplete="off"> <i class="fa fa-truck"></i>
-                  </label>
-                  <label class="btn btn-primary">
-                    <input type="checkbox" autocomplete="off"> <i class="fa fa-motorcycle"></i>
-                  </label>
+                  ';
+            $active = 'active';
+            $checked = 'checked';
+            foreach ($transport as $transport_term) {
+                $result .='
+                  <label class="btn btn-primary '.$active.'" >
+                    <input type="radio" name="transport_type" class="transport-type-field" value="'.$transport_term->slug.'"autocomplete="off" '. $checked . '> <i class="fa fa-'.$transport_term->slug.'"></i>
+                  </label>';
+
+                if ($active) {$active = ''; $checked = '';}
+            }
+            $result .='
               </div>
-          </div>
+          </div>';
+        }
 
 
-          <button type="submit" class="btn btn-primary btn-lg" id="submitTrack" data-loading-text="Sending...">Submit</button>
+
+
+        $result .='<button type="submit" class="btn btn-primary btn-lg" id="submitTrack" data-loading-text="Sending...">Submit</button>
         </form>';
 
 
@@ -495,7 +500,7 @@ class GPSTrackingBlog {
                 'post_content'   => $_POST['description'], // The full text of the post.
                 'post_title'     => $_POST['title'], // The title of your post.
                 'post_status'    => 'publish',
-                'post_type'     => 'track'
+                'post_type'     => 'track',
             ) );
             if( is_wp_error( $track_id ) ) {
                 echo $track_id->get_error_message();
@@ -508,6 +513,9 @@ class GPSTrackingBlog {
                 add_post_meta($track_id, 'track_data_distance', $_POST['track_data_simple']['distance']);
                 add_post_meta($track_id, 'track_data_upHill', $_POST['track_data_simple']['upHill']);
                 add_post_meta($track_id, 'track_data_downHill', $_POST['track_data_simple']['downHill']);
+
+                wp_set_post_terms( $track_id, $_POST['transport'], 'transport' );
+
                 echo get_permalink($track_id);
 
             }
@@ -583,6 +591,7 @@ class GPSTrackingBlog {
                     'post_content'   => $_POST['description'], // The full text of the post.
                     'post_title'     => $_POST['title'], // The title of your post.
                 ) );
+                wp_set_post_terms( $_POST['postid'], $_POST['transport'], 'transport' );
                 echo 'post updated';
             } else {
                 echo 'permision denide';
